@@ -23,6 +23,7 @@ public class Task4_4 {
 		}
 		in.close();
 		Code code = new Code(g);
+		code = code.getDualCode();
 		Trellis.setPrintWriter(System.out);
 		new Trellis(code, false).print(out, "Direct");
 		new Trellis(code, true).print(out, "Dual");

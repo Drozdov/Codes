@@ -82,24 +82,6 @@ public class Trellis {
 	private void initIfNotDual(int[][] g) {
 		int k = code.k;
 		int n = code.n;
-		for (int i = k - 1, c = n - 1; i >= 0; i--, c--) {
-			loop: while (g[i][c] == 0) {
-				for (int j = i - 1; j >= 0; j--) {
-					if (g[j][c] == 1) {
-						int[] tmp = g[i];
-						g[i] = g[j];
-						g[j] = tmp;
-						break loop;
-					}
-				}
-				c--;
-			}
-			for (int j = i - 1; j >= 0; j--) {
-				if (g[j][c] == g[i][c]) {
-					g[j] = BinaryMath.sum(g[j], g[i]);
-				}
-			}
-		}
 		for (int i = 0, c = 0; i < k; i++, c++) {
 			loop: while (g[i][c] == 0) {
 				for (int j = i + 1; j < k; j++) {
@@ -115,6 +97,39 @@ public class Trellis {
 			for (int j = i + 1; j < k; j++) {
 				if (g[j][c] == g[i][c]) {
 					g[j] = BinaryMath.sum(g[j], g[i]);
+				}
+			}
+		}
+		
+		int[] rights = new int[k];
+		for (int i = 0; i < k; i++) {
+			for (int j = n - 1; j >= 0; j--) {
+				if (g[i][j] == 1) {
+					rights[i] = j;
+					break;
+				}
+			}
+		}
+		
+		for (int i = n - 1; i >= 0; i--) {
+			List<Integer> conflicts = new ArrayList<Integer>();
+			for (int j = 0; j < k; j++) {
+				if (rights[j] == i) {
+					conflicts.add(j);
+				}
+			}
+			if (conflicts.size() > 1) {
+				int last = conflicts.get(conflicts.size() - 1);
+				for (int c : conflicts) {
+					if (c != last) {
+						g[c] = BinaryMath.sum(g[c], g[last]);
+						for (int j = i; j >= 0; j--) {
+							if (g[c][j] == 1) {
+								rights[c] = j;
+								break;
+							}
+						}
+					}
 				}
 			}
 		}
