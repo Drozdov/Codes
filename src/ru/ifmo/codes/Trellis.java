@@ -146,7 +146,7 @@ public class Trellis {
 			out.println("Активные элементы в строках:");
 			for (int i = 0; i < k; i++) {
 				out.println("В строке " + (i + 1) + ": c " + (active[i][0] + 1) + " по "
-						+ (active[i][1] + 1) + ";");
+						+ (active[i][1]) + ";");
 			}
 		}
 		
@@ -156,55 +156,61 @@ public class Trellis {
 		nodes[0][0].vector = new int[n];
 		
 		for (int i = 0; i < n; i++) {
-			List<Integer> act = new ArrayList<Integer>();
+			int size = 0;
+			int a = -1;
+			List<Integer> toRemove = new ArrayList<Integer>();
+			int cur = 0;
+			int dim = nodes[i][0].dimension;
 			for (int j = 0; j < k; j++) {
-				if (active[j][0] <= i && active[j][1] > i) {
-					act.add(j);
+				if (active[j][0] <= i && i < active[j][1]) {
+					size++;
+				}
+				if (active[j][0] <= i && i <= active[j][1]) {
+					cur++;
+				}
+				if (active[j][1] == i) {
+					toRemove.add(cur - 1);
+					dim--;
+				}
+				if (active[j][0] == i) {
+					a = j;
+					dim++;
 				}
 			}
-			nodes[i + 1] = new Node[1 << act.size()];
+			nodes[i + 1] = new Node[1 << size];
 			for (Node node : nodes[i]) {
-				updateNext(node);
+				int val = node.id;
+				int val1 = -1;
+				if (a != -1) {
+					val1 = (1 << node.dimension) + val;
+				}
+				val = removePositions(val, toRemove);
+				val1 = removePositions(val1, toRemove);
+				int j = node.vector[i];
+				Node first = node.addNext(j, val);
+				first.dimension = dim;
+				first.vector = node.vector;
+				if (a != -1) {
+					Node second = node.addNext(1 - j, val1);
+					second.dimension = dim;
+					second.vector = BinaryMath.sum(node.vector, code.g[a]);
+					
+				}
+				
 			}
-			
-		}
-	}
-	
-	private void updateNext(Node node) {
-		int val = node.id;
-		int n = -1;
-		int dim = node.dimension;
-		List<Integer> act = new ArrayList<Integer>();
-		for (int j = 0; j < code.k; j++) {
-			if (active[j][0] <= node.level && active[j][1] >= node.level) {
-				act.add(j);
-			}
-		}
-		for (int i = 0; i < act.size(); i++) {
-			if (active[act.get(i)][0] == node.level) {
-				n = act.get(i);
-			}
-			if (active[act.get(i)][1] == node.level) {
-				int f = (val >> (i + 1)) << i;
-				int s = val % (1 << i);
-				val = f + s;
-				dim--;
-			}
-		}
-		if (n != -1)
-			dim++;
-		int i = node.vector[node.level/* + 1*/];
-		Node first = node.addNext(i, val);
-		first.dimension = dim;
-		first.vector = node.vector;
-		if (n != -1) {
-			Node second = node.addNext(1 - i, (1 << (dim - 1)) + val);
-			second.dimension = dim;
-			second.vector = BinaryMath.sum(node.vector, code.g[n]);
 			
 		}
 	}
 
+	private int removePositions(int val, List<Integer> toRemove) {
+		for (int r : toRemove) {
+			int f = (val >> (r + 1)) << r;
+			int s = val % (1 << r);
+			val = f + s;
+		}
+		return val;
+	}
+	
 	private void initIfDual(int[][] h) {
 		nodes = new Node[code.n + 1][1 << code.k];
 		nodes[0][0] = new Node(0, 0);
@@ -236,8 +242,8 @@ public class Trellis {
 		}
 	}
 	
-	public void print(PrintStream out) {
-		out.println("digraph Trellis {");
+	public void print(PrintStream out, String name) {
+		out.println("digraph " + name + " {");
 		nodes[0][0].print(out);
 		for (int i = 0; i < nodes.length - 1; i++) {
 			for (int j = 0; j < nodes[i].length; j++) {
@@ -254,5 +260,9 @@ public class Trellis {
 		}
 		out.println("}");
 		
+	}
+	
+	public void print(PrintStream out) {
+		print(out, "Trellis");
 	}
 }

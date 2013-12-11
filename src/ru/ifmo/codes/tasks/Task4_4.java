@@ -24,8 +24,7 @@ public class Task4_4 {
 		in.close();
 		Code code = new Code(g);
 		Trellis.setPrintWriter(System.out);
-		Trellis trellis = new Trellis(code, false);
-		
-		trellis.print(out);
+		new Trellis(code, false).print(out, "Direct");
+		new Trellis(code, true).print(out, "Dual");
 	}
 }
