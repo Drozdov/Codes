@@ -19,7 +19,7 @@ public class Code {
 		Code.out = out;
 	}
 	
-	private int[][] g;
+	int[][] g;
 	int n, k;
 	
 	public Code(int[][] g) {

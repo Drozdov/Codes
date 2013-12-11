@@ -20,6 +20,7 @@ public class Task2_3 {
 				g[i][j] = in.nextInt();
 			}
 		}
+		in.close();
 		Code.setPrintStream(out);
 		Code.setMode(Code.SHOW_STEPS);
 		Code original = new Code(g);
@@ -27,8 +28,8 @@ public class Task2_3 {
 		original.printCode(out);
 		Code dual = original.getDualCode();
 		
-		out.print("Минимальное расстояние исходного кода равно " + original.distance());
-		out.print("Минимальное расстояние дуального кода равно " + dual.distance());
+		out.println("Минимальное расстояние исходного кода равно " + original.distance());
+		out.println("Минимальное расстояние дуального кода равно " + dual.distance());
 	}
 
 }

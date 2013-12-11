@@ -17,6 +17,7 @@ public class Task2_7 {
 				h[i][j] = in.nextInt();
 			}
 		}
+		in.close();
 		int[][] table = new int[1 << r][];
 		for (int err = 0; err < 1 << n; err++) {
 			int[] e = BinaryMath.toVector(err, n);
