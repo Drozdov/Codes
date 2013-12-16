@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class Trellis {	
+public class Trellis {
 	private class Node {
 		Node(int level, int id) {
 			this.id = id;
@@ -21,12 +21,9 @@ public class Trellis {
 		private int id;
 		private int level;
 		private int[] next = new int[2];
-		private boolean printed;
 		private int dimension = code.k;
 		private int[] vector;
 		private BKDRInfo info;
-		private String label;
-		private String[] edgeLabels;
 		
 		Node addNext(int i, int val) {
 			next[i] = val;
@@ -49,20 +46,26 @@ public class Trellis {
 			return "N" + level + "_" + id;
 		}
 		
-		void print(PrintStream out) {
-			if (printed)
-				return;
+		void print(PrintStream out, int nodeLabel) {
 			int[] vector = BinaryMath.toVector(id, Math.max(dimension, 1));
 			String str = "";
-			if (label != null) {
-				str = label;
-			} else {
+			switch (nodeLabel) {
+			case PRINT_ID:
 				for (int i : vector) {
 					str += i;
 				}
+				break;
+			case PRINT_ALPHA:
+				str = toStr(info.alpha);
+				break;
+			case PRINT_BETTA:
+				str = toStr(info.betta);
+				break;
+			default:
+				throw new IllegalArgumentException();
+
 			}
 			out.println(toString() + " [label="  + str + "];");
-			printed = true;
 		}
 	}
 	
@@ -263,20 +266,41 @@ public class Trellis {
 		}
 	}
 	
-	public void print(PrintStream out, String name) {
-		out.println("digraph " + name + " {");
-		nodes[0][0].print(out);
-		for (int i = 0; i < nodes.length - 1; i++) {
+	public final static int PRINT_ID = 0;
+	public final static int PRINT_ALPHA = 1;
+	public final static int PRINT_BETTA = 2;
+	public final static int PRINT_VAL = 0;
+	public final static int PRINT_GAMMA = 1;
+	public final static int PRINT_SIGMA = 2;
+	
+	public void print(PrintStream out, String name, int nodeLabel, int edgeLabel) {
+		out.println("graph " + name + " {");
+		out.println("rankdir=LR;");
+		for (int i = 0; i < nodes.length; i++) {
 			for (int j = 0; j < nodes[i].length; j++) {
 				Node node = nodes[i][j];
 				if (node == null)
 					continue;
+				node.print(out, nodeLabel);
 				for (int k = 0; k <= 1; k++) {
-					String label = (node.edgeLabels == null) ? ("" + k)
-							: node.edgeLabels[k];
+					String label = null;
+					switch (edgeLabel) {
+					case PRINT_VAL:
+						label = "" + k;
+						break;
+					case PRINT_GAMMA:
+					case PRINT_SIGMA:
+						if (node.info == null || node.info.sigma == null)
+							break;
+						label = toStr((edgeLabel == PRINT_GAMMA) ? node.info.gamma[k]
+								: node.info.sigma[k]);
+						break;
+					default:
+						throw new IllegalArgumentException();
+					}
+							
 					if (node.next(k) != null) {
-						node.next(k).print(out);
-						out.println(node + " -> " + node.next(k)
+						out.println(node + " -- " + node.next(k)
 								+ " [label = " + label + "];");
 					}
 				}
@@ -286,10 +310,16 @@ public class Trellis {
 		
 	}
 	
+	public void print(PrintStream out, String name) {
+		print(out, name, PRINT_ID, PRINT_VAL);
+	}
+	
 	public void print(PrintStream out) {
 		print(out, "Trellis");
 	}
 	
+	
+
 	private class BKDRInfo {
 		double alpha, betta;
 		double[] gamma, sigma;
@@ -319,11 +349,6 @@ public class Trellis {
 					info.gamma[1] = 0;
 				}
 				node.info = info;
-				node.edgeLabels = new String[2];
-				for (int j = 0; j <= 1; j++) {
-					node.edgeLabels[j] = String.format("%.5f",
-							node.info.gamma[j]).replace(',', '.');
-				}
 			}
 		}
 		nodes[0][0].info.alpha = 1;
@@ -345,25 +370,18 @@ public class Trellis {
 					if (node.next[j] != -1) {
 						node.info.betta += nodes[i + 1][node.next[j]].info.betta
 								* node.info.gamma[j];
-						node.label = toStr(node.info.betta);
 					}
 				}
 			}
 		}
 		for (int i = 0; i < n; i++) {
 			for (Node node : nodes[i]) {
+				node.info.sigma = new double[2];
 				for (int j = 0; j <= 1; j++) {
-					node.info.sigma = new double[2];
-					
 					if (node.next[j] != -1) {
 						node.info.sigma[j] = node.info.alpha
 								* node.info.gamma[j]
 								* nodes[i + 1][node.next[j]].info.betta;
-						System.err.println(node.info.alpha + " "
-								+ node.info.sigma[j] + " "
-								+ nodes[i + 1][node.next[j]].info.betta);
-						System.err.println(node.info.sigma[0]);
-						node.edgeLabels[j] = toStr(node.info.sigma[j]);
 					}
 					
 					
@@ -373,6 +391,59 @@ public class Trellis {
 	}
 	
 	private String toStr(double d) {
-		return String.format("%.6f", d).replace(',', '.');
+		return String.format("%.5f", d).replace(',', '.');
+	}
+	
+	public double getLikelihood(int level) {
+		double k0 = 0, k1 = 0;
+		for (Node node : nodes[level]) {
+			k0 += node.info.sigma[0];
+			k1 += node.info.sigma[1];
+		}
+		return Math.log(1. * k1 / k0);
+	}
+	
+	public double getProbability() {
+		return nodes[0][0].info.betta;
+	}
+	
+	public class Pair {
+		public Pair(int[] vector, double probability) {
+			this.vector = vector;
+			this.probability = probability;
+		}
+		public int[] vector;
+		public double probability;
+		
+		@Override
+		public String toString() {
+			return String.format("%s: %.5f  %.3f",
+					BinaryMath.toString(vector, false), probability,
+					probability / getProbability());
+		}
+	}
+	
+	public Pair getVector(int i) {
+		int[] mask = BinaryMath.toVector(i, code.k);
+		int n = code.n;
+		int[] vector = new int[n];
+		double p = 1;
+		Node cur = nodes[0][0];
+		int k = 0;
+		for (int j = 0; j < n; j++) {
+			int q;
+			if (cur.next[0] >= 0 && cur.next[1] >= 0) {
+				q = mask[k++];
+			} else if (cur.next[0] >= 0) {
+				q = 0;
+			} else {
+				q = 1;
+			}
+			vector[j] = q;
+			p *= cur.info.gamma[q];
+			cur = cur.next(q);
+			
+		}
+		return new Pair(vector, p);
 	}
 }

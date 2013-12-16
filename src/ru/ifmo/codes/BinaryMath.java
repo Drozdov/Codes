@@ -60,4 +60,13 @@ public class BinaryMath {
 		}
 		return res;
 	}
+	
+	public static String toString(int[] array, boolean addSpaces) {
+		String res = "";
+		for (int i = 0; i < array.length; i++) {
+			res += array[i];
+			res += (addSpaces && (i < array.length - 1)) ? " " : ""; 
+		}
+		return res;
+	}
 }
